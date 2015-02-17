@@ -6,14 +6,14 @@
 # Datatypes (KEYWORD1)
 #######################################
 
-QTouchSense	KEYWORD1
-settings	KEYWORD2 
+QTouchADCTiny	KEYWORD1
+init	KEYWORD2 
 sense	KEYWORD2
 
 #######################################
 # Methods and Functions (KEYWORD2)
 
-settings	KEYWORD2 
+init	KEYWORD2 
 sense	KEYWORD2
 
 #######################################

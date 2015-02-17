@@ -4,19 +4,19 @@
   Released into the public domain.
 */
 
-#ifndef QTouchSense_h
-#define QTouchSense_h
+#ifndef QTouchADCTiny_h
+#define QTouchADCTiny_h
 
 #include <Arduino.h>
 
-class QTouchSenseClass
+class QTouchADCTinyClass
 {
   public:
-    void settings();
+    void init();
     uint16_t sense(byte ADCReadPin, byte ADCRef, int samples);
 };
 
-extern QTouchSenseClass QTouchSense;
+extern QTouchADCTinyClass QTouchADCTiny;
 
 #endif
 
