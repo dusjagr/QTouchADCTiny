@@ -1,0 +1,57 @@
+#include "Arduino.h"
+#include "QTouchADCTiny.h"
+
+void QTouchADCTinyClass::init()
+{
+#define int QTouchDelay 5 // time it takes for the capacitor to get charged/discharged in microseconds
+
+// ADC
+    //DDRB=(0<<PB2)|(0<<PB3)|(0<<PB4); //inputs of ADC-Sensor and ADC-Reference
+    ADMUX = (0<<REFS0); //REFS0=0:VCC reference, =1:internal reference 1.1V
+    // ADMUX = (0<<REFS0) | (0x00); right two bits select ADC-pin
+    ADCSRA = (1<<ADEN)| (1<<ADPS2)|(1<<ADPS1)|(1<<ADPS0); //ADC enable, prescaler 128
+  
+return;
+}
+
+
+uint16_t QTouchADCTinyClass::sense(byte ADCReadPin, byte ADCRef, int samples)
+{   
+    int QTouchDelay = 5;
+    unsigned int adc1 = 0;
+    unsigned int adc2 = 0;
+
+for (int i=0; i<samples; i++) // Repeat the measurement between 1 - 60 times and average to reduce noise
+  {
+    // first measurement: adcPin low, S/H high
+    ADMUX = (0<<REFS0) | (refPin); // set ADC sample+hold condenser to the free A0 (ADC0) 
+    delayMicroseconds(QTouchDelay);
+    PORTB |= (1<<refPin); //PC0/ADC0 ref/ S/H high (pullup or output, doesn't matter)
+    PORTB &= ~(1<<adcPin);
+    DDRB |= (1<<adcPin) | (1<<refPin); // both output: adcPin low, S/H (ADC0) high
+    delayMicroseconds(QTouchDelay);
+    DDRB &= ~((1<<adcPin) | (1<<refPin)); // set pins to Input...
+    PORTB &= ~((1<<adcPin) | (1<<refPin)); // ... and low: Tristate
+
+    adc1+= analogRead(adcPin);
+
+    // second measurement: adcPin high, S/H low
+    ADMUX = (0<<REFS0) | refPin; // set ADC sample+hold condenser to the free PC0 (ADC0)
+    delayMicroseconds(QTouchDelay);
+    PORTB |= (1<<adcPin); // sensePad/adcPin high
+    DDRB |= (1<<adcPin) | (1<<refPin); // both output: adcPin high, S/H (ADC0) low
+    delayMicroseconds(QTouchDelay);
+    DDRB &= ~((1<<adcPin) | (1<<refPin));
+    PORTB &= ~((1<<adcPin) | (1<<refPin));
+
+    adc2+= analogRead(adcPin);
+    
+ } 
+
+  adc1 /= samples; // divide the accumulated measurements by number of samples
+  adc2 /= samples;
+
+  return adc2 - adc1; // return conversion result
+}
+
+QTouchADCTinyClass QTouchADCTiny;
