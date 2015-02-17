@@ -11,14 +11,14 @@ const uint16_t ledFadeTable[32] = {0, 0, 0, 1, 1, 2, 3, 3, 4, 5, 6, 7, 9, 10, 12
 void setup() {
 
   //Serial.begin(115200);
-  QTouchSense.init();
-  ref1 = QTouchSense.sense(sensePin, RefPin, 64);
+  QTouchADCTiny.init();
+  ref1 = QTouchADCTiny.sense(sensePin, RefPin, 64);
   
 }
 
 void loop() {
 
-  int value1 = (ref1 - QTouchSense.sense(sensePin, RefPin, 16));
+  int value1 = (ref1 - QTouchADCTiny.sense(sensePin, RefPin, 16));
   
   int16_t idx= (value1); // offset probe_val by value of untouched probe
   if(idx<0) idx= 0; // limit the index!!!
