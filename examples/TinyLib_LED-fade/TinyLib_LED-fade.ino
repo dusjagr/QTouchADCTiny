@@ -18,7 +18,7 @@ void setup() {
 
 void loop() {
 
-  int value1 = (ref1 - QTouchADCTiny.sense(sensePin, RefPin, 16));
+  int value1 = (QTouchADCTiny.sense(sensePin, RefPin, 16) - ref1);
   
   int16_t idx= (value1); // offset probe_val by value of untouched probe
   if(idx<0) idx= 0; // limit the index!!!
