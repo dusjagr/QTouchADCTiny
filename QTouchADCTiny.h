@@ -13,7 +13,7 @@ class QTouchADCTinyClass
 {
   public:
     void init();
-    uint16_t sense(byte ADCReadPin, byte ADCRef, int samples);
+    uint16_t sense(byte ADCReadPin, byte ADCRef, uint8_t samples);
     uint8_t touch(byte ADCReadPin);
 };
 

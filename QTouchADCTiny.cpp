@@ -3,81 +3,87 @@
 
 void QTouchADCTinyClass::init()
 {
-#define CHARGE_DELAY  100 // time it takes for the capacitor to get charged/discharged in microseconds
-#define TRANSFER_DELAY  100 // time it takes for the capacitors to exchange charge
+// define variables. not sure if its possible in the library or where, global stuff...
 
-#define ADMUX_MASK  0b00001111 // mask the mux bits in the ADMUX register
-#define MUX_GND 0b00001111 // mux value for connecting the ADC unit internally to GND
-#define MUX_REF_VCC 0b01000000 // value to set the ADC reference to Vcc
+int QTouchDelay = 5;
+int measurement1, measurement2;
 
-  // prepare the ADC unit for one-shot measurements
-  // see the atmega328 datasheet for explanations of the registers and values
-  ADMUX = 0b01000000; // Vcc as voltage reference (bits76), right adjustment (bit5), use ADC0 as input (bits3210)
-  ADCSRA = 0b11000100; // enable ADC (bit7), initialize ADC (bit6), no autotrigger (bit5), don't clear int-flag  (bit4), no interrupt (bit3), clock div by 16@16Mhz=1MHz (bit210) ADC should run at 50kHz to 200kHz, 1MHz gives decreased resolution
-  ADCSRB = 0b00000000; // autotrigger source free running (bits210) doesn't apply
-  while(ADCSRA & (1<<ADSC)){  } // wait for first conversion to complete 
+// ADC
+    ADMUX = (0<<REFS0); //REFS0=0:VCC reference, =1:internal reference 1.1V
+    ADCSRA = (1<<ADEN)| (0<<ADPS2)|(1<<ADPS1)|(1<<ADPS0); //ADC enable, prescaler 8
+    //ADCSRA = (1<<ADEN)| (1<<ADPS2)|(0<<ADPS1)|(0<<ADPS0); //ADC enable, prescaler 16
+    //ADCSRA = (1<<ADEN)| (1<<ADPS2)|(1<<ADPS1)|(1<<ADPS0); //ADC enable, prescaler 128
+
+  //while(ADCSRA & (1<<ADSC)){  } // wait for first conversion to complete . not sure if needed
   
 return;
 }
 
 
-uint16_t QTouchADCTinyClass::sense(byte ADCReadPin, byte ADCRef, int samples)
+uint16_t QTouchADCTinyClass::sense(byte adcPin, byte refPin, uint8_t samples)
 {   
-    unsigned int adc1 = 0;
-    unsigned int adc2 = 0;
-
-for (int i=0; i<samples; i++) // Repeat the measurement between 1 - 60 times and average to reduce noise
+    long _value = 0;
+    int muxAdc = 0;
+    int muxRef = 0;
+    
+    if (adcPin == PB3) muxAdc = 0x03;
+    if (adcPin == PB4) muxAdc = 0x02;
+    if (adcPin == PB2) muxAdc = 0x01;
+    if (adcPin == PB5) muxAdc = 0x00;
+    
+    if (refPin == PB3) muxRef = 0x03;
+    if (refPin == PB4) muxRef = 0x02;
+    if (refPin == PB2) muxRef = 0x01;
+    if (refPin == PB5) muxRef = 0x00;
+  
+  for(int _counter = 0; _counter < samples; _counter ++)
   {
-    uint8_t mask= _BV(ADCReadPin) | _BV(ADCRef);
-  
-  // First measurement  
-
-    DDRB|= mask; // config pins as push-pull output
-    // set partner high to charge the s&h cap and pin low to discharge touch probe cap
-    PORTB= (PORTB & ~_BV(ADCReadPin)) | _BV(ADCRef); 
-    // charge/discharge s&h cap by connecting it to partner
-    ADMUX = MUX_REF_VCC | ADCRef; // select partner as input to the ADC unit 
-    delayMicroseconds(CHARGE_DELAY); // wait for the touch probe and the s&h cap to be fully charged/dsicharged 
+    // first measurement: adcPin low, S/H high
+    ADMUX = (0<<REFS0) | (muxRef); // set ADC sample+hold condenser to the free A0 (ADC0) 
+    //delayMicroseconds(QTouchDelay);
+    PORTB |= (1<<refPin); //PC0/ADC0 ref/ S/H high (pullup or output, doesn't matter)
+    PORTB &= ~(1<<adcPin);
+    DDRB |= (1<<adcPin) | (1<<refPin); // both output: adcPin low, S/H (ADC0) high
+    delayMicroseconds(QTouchDelay);
+    DDRB &= ~((1<<adcPin) | (1<<refPin)); // set pins to Input...
+    PORTB &= ~((1<<adcPin) | (1<<refPin)); // ... and low: Tristate
     
-    DDRB&= ~mask; // config pins as input
-    PORTB&= ~mask; // disable the internal pullup to make the ports high Z 
-    // connect touch probe cap to s&h cap to transfer the charge
-    ADMUX= MUX_REF_VCC | ADCReadPin; // select pin as ADC input 
-    delayMicroseconds(TRANSFER_DELAY); // wait for charge to be transfered  
-    // measure
-    ADCSRA|= (1<<ADSC); // start measurement 
-    while(ADCSRA & (1<<ADSC)){  } // wait for conversion to complete 
-    adc1 += ADC;
-
-  // Second measurement - Do everything again with inverted ref / probe pins
-  
-    DDRB|= mask; // config pins as push-pull output   
-    // set pin high to charge the touch probe and partner low to discharge s&h cap
-    PORTB= (PORTB & ~_BV(ADCRef)) | _BV(ADCReadPin); 
-    // charge/discharge s&h cap by connecting it to partner
-    ADMUX = MUX_REF_VCC | ADCRef; // select partner as input to the ADC unit 
-    delayMicroseconds(CHARGE_DELAY); // wait for the touch probe and the s&h cap to be fully charged/dsicharged 
+    ADMUX = (0<<REFS0) | (muxAdc); //  read extern condensator from adcPin
+    ADCSRA |= (1<<ADSC); // start conversion
+    while (!(ADCSRA & (1 << ADIF))); // wait for conversion complete
+    ADCSRA |= (1 << ADIF); // clear ADIF
+    measurement1=ADC;
     
-    DDRB&= ~mask; // config pins as input
-    PORTB&= ~mask; // disable the internal pullup to make the ports high Z 
-    // connect touch probe cap to s&h cap to transfer the charge
-    ADMUX= MUX_REF_VCC | ADCReadPin; // select pin as ADC input 
-    delayMicroseconds(TRANSFER_DELAY); // wait for charge to be transfered  
-    // measure
-    ADCSRA|= (1<<ADSC); // start measurement 
-    while(ADCSRA & (1<<ADSC)){  } // wait for conversion to complete 
-    adc2 += ADC;
- } 
+    //measurement1 = analogRead(adcPin);
 
-  adc1 /= samples; // divide the accumulated measurements by number of samples
-  adc2 /= samples;
-
-  return adc2 - adc1; // return conversion result
+    // second measurement: adcPin high, S/H low
+    ADMUX = (0<<REFS0) | (muxRef); // set ADC sample+hold condenser to the free PC0 (ADC0)
+    //delayMicroseconds(QTouchDelay);
+    PORTB |= (1<<adcPin); // sensePad/adcPin high
+    //PORTB &= ~(1<<refPin);
+    DDRB |= (1<<adcPin) | (1<<refPin); // both output: adcPin high, S/H (ADC0) low
+    delayMicroseconds(QTouchDelay);
+    DDRB &= ~((1<<adcPin) | (1<<refPin));
+    PORTB &= ~((1<<adcPin) | (1<<refPin));
+    
+    ADMUX = (0<<REFS0) | (muxAdc); //   read extern condensator from adcPin
+    ADCSRA |= (1<<ADSC); // start conversion
+    while (!(ADCSRA & (1 << ADIF))); // wait for conversion complete
+    ADCSRA |= (1 << ADIF); // clear ADCIF
+    measurement2=ADC;
+    
+    //measurement2 = analogRead(adcPin);
+    
+    _value += (measurement2 - measurement1);
+    
+  } 
+  
+  return _value / samples;
 }
 
-uint8_t QTouchADCTinyClass::touch(byte ADCReadPin)
+uint8_t QTouchADCTinyClass::touch(byte ADCReadPin) // this doesn't work yet...
 {
-  int touchValue = QTouchADCTiny.sense(ADCReadPin, PB5, 10);
+  int touchValue = QTouchADCTiny.sense(ADCReadPin, PB2, 10);
   
   if (touchValue > 100){
     return 1;

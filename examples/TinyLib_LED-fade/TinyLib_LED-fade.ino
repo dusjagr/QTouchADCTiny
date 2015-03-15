@@ -1,8 +1,8 @@
 #include <QTouchADCTiny.h>
 
-int RefPin  = PB5;
+int RefPin  = PB2;
 int sensePin =  PB3;
-int ledPin = PB4;
+int ledPin = PB0;
 
 int ref1 = 0;
 
