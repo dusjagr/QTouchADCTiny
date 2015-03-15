@@ -5,8 +5,8 @@ void QTouchADCTinyClass::init()
 {
 // define variables. not sure if its possible in the library or where, global stuff...
 
-int QTouchDelay = 5;
-int measurement1, measurement2;
+// int QTouchDelay = 5;
+// int measurement1, measurement2;
 
 // ADC
     ADMUX = (0<<REFS0); //REFS0=0:VCC reference, =1:internal reference 1.1V
@@ -25,6 +25,8 @@ uint16_t QTouchADCTinyClass::sense(byte adcPin, byte refPin, uint8_t samples)
     long _value = 0;
     int muxAdc = 0;
     int muxRef = 0;
+    int measurement1, measurement2;
+    int QTouchDelay = 5;
     
     if (adcPin == PB3) muxAdc = 0x03;
     if (adcPin == PB4) muxAdc = 0x02;
